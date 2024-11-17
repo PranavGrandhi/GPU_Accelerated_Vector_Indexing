@@ -15,9 +15,9 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--n-clusters", type=int, default=128)
     args = parser.parse_args()
 
-    embeddings = np.load(f"{args.data_dir}/embeddings.npy")
+    embeddings = np.load(f"{args.data_dir}/embeddings.npy", mmap_mode='r')[:1000000]
 
-    kmeans = KMeans(n_clusters=args.n_clusters, init="k-means++", n_init=1, random_state=42, verbose=1).fit(embeddings)
+    kmeans = KMeans(n_clusters=args.n_clusters, init="k-means++", n_init=1, random_state=42, verbose=1, max_iter=5).fit(embeddings)
 
     cluster_centroids = kmeans.cluster_centers_
     print("cluster_centroids", cluster_centroids.shape)
