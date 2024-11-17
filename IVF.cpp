@@ -52,9 +52,9 @@ class IVFIndex
 
         // min heap to keep track of top k vectors
         typedef std::priority_queue<
-            std::tuple<float, size_t>,
-            std::vector<std::tuple<float, size_t>>,
-            std::greater<std::tuple<float, size_t>>
+            pair<float, int>,
+            vector<pair<float, int>>,
+            greater<pair<float, int>>
         > myheap;
         myheap heap;
 
@@ -65,7 +65,7 @@ class IVFIndex
 
             // get cosine similarity on this batch
             vector<float> scores(currentBatchSize);
-            cudaCosineSimilarity(
+            computeCosineSimilarities(
                     flattenedEmbeddings + i * vectorSize,
                     query,
                     scores.data(),
@@ -80,7 +80,7 @@ class IVFIndex
                 {
                     heap.push(make_pair(scores[j], i + j));
                 } 
-                else if (item > heap.top()) 
+                else if (make_pair(scores[j], i + j) > heap.top()) 
                 {
                     heap.pop();
                     heap.push(make_pair(scores[j], i + j));
@@ -120,7 +120,7 @@ class IVFIndex
 
             // Find similar embeddings in the cluster
             int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
-            auto similarities = find_similar(cluster_embeddings[cluster], query, elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
+            auto similarities = findSimilar(cluster_embeddings[cluster], query, elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
 
             for (const auto& sim : similarities) 
             {
