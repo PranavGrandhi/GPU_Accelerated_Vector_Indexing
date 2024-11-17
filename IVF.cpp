@@ -37,12 +37,12 @@ class IVFIndex
 
     //returns the top k centroids
     vector<pair<float, int>> findSimilar(
-    const float* flattenedEmbeddings,
-    const float* query,
-    size_t numEmbeddings,
-    size_t vectorSize,
-    size_t topK,
-    size_t batchSize,
+    float* flattenedEmbeddings,
+    float* query,
+    int numEmbeddings,
+    int vectorSize,
+    int topK,
+    int batchSize,
     bool useCuda) 
     {
         if (batchSize == 0) 
@@ -100,7 +100,7 @@ class IVFIndex
     }
 
     //Returns top k results from searching top n_probe centroids
-    vector<pair<float, int>> search(const vector<float>& query, int k, bool use_cuda = false) 
+    vector<pair<float, int>> search(vector<float>& query, int k, bool use_cuda = false) 
     {
         // Find top centroids
         auto top_centroids = findSimilar(cluster_centroids.data(), query, num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
