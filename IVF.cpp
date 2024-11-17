@@ -59,9 +59,9 @@ class IVFIndex
         myheap heap;
 
         // loop over chunks in dataset
-        for (size_t i = 0; i < numEmbeddings; i += batchSize) 
+        for (int i = 0; i < numEmbeddings; i += batchSize) 
         {
-            size_t currentBatchSize = min(batchSize, numEmbeddings - i);
+            int currentBatchSize = min(batchSize, numEmbeddings - i);
 
             // get cosine similarity on this batch
             vector<float> scores(currentBatchSize);
@@ -74,7 +74,7 @@ class IVFIndex
                 );
 
             // update heap to keep track of top k
-            for (size_t j = 0; j < currentBatchSize; j++) 
+            for (int j = 0; j < currentBatchSize; j++) 
             {
                 if (heap.size() < topK) 
                 {
@@ -163,12 +163,12 @@ class IVFIndex
         vector<vector<int>> cluster_mappings =
             cluster_mappings_json.get<vector<vector<int>>>();
 
-        size_t n_clusters = cluster_mappings.size();
+        int n_clusters = cluster_mappings.size();
 
         // Load cluster embeddings
         vector<vector<float>> cluster_embeddings(n_clusters);
 
-        for (size_t i = 0; i < n_clusters; ++i) 
+        for (int i = 0; i < n_clusters; ++i) 
         {
             string filename = data_dir + "/cluster_embeddings_" + to_string(i) + ".bin";
 
@@ -183,8 +183,8 @@ class IVFIndex
             streamsize file_size = file.tellg();
             file.seekg(0, ios::beg);
 
-            size_t cols = 384; // Set this to the correct embedding dimension
-            size_t rows = file_size / (sizeof(float) * cols);
+            int cols = 384; // Set this to the correct embedding dimension
+            int rows = file_size / (sizeof(float) * cols);
             if (file_size % (sizeof(float) * cols) != 0) 
             {
                 throw runtime_error("File size is not consistent with the expected float dimensions.");
@@ -212,8 +212,8 @@ class IVFIndex
         streamsize centroids_file_size = centroids_file.tellg();
         centroids_file.seekg(0, ios::beg);
 
-        size_t centroid_cols = 384; 
-        size_t centroid_rows = centroids_file_size / (sizeof(float) * centroid_cols);
+        int centroid_cols = 384; 
+        int centroid_rows = centroids_file_size / (sizeof(float) * centroid_cols);
         if (centroids_file_size % (sizeof(float) * centroid_cols) != 0) 
         {
             throw runtime_error("Centroids file size is not consistent with the expected float dimensions.");
