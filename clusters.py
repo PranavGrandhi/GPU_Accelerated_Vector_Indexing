@@ -1,5 +1,5 @@
 import json
-
+import time
 import numpy as np
 from sklearn.cluster import KMeans
 
@@ -15,10 +15,11 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--n-clusters", type=int, default=128)
     args = parser.parse_args()
     print("About to Load Embeddings")
-    embeddings = np.load(f"{args.data_dir}/embeddings.npy", mmap_mode='r')[:1000000]
+    embeddings = np.load(f"{args.data_dir}/embeddings.npy", mmap_mode='r')[:500000]
     print("Loaded Embeddings", embeddings.shape)
-    kmeans = KMeans(n_clusters=args.n_clusters, init="k-means++", n_init=1, random_state=42, verbose=1, max_iter=5).fit(embeddings)
-
+    time1 = time.time()
+    kmeans = KMeans(n_clusters=args.n_clusters, init="k-means++", n_init=1, random_state=42, verbose=1, max_iter=8).fit(embeddings)
+    print("Time taken for KMeans", time.time()-time1)
     cluster_centroids = kmeans.cluster_centers_
     print("cluster_centroids", cluster_centroids.shape)
     np.save(f"{args.data_dir}/cluster_centroids_Small_Data.npy", cluster_centroids)
