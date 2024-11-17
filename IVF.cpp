@@ -26,9 +26,9 @@ class IVFIndex
     public:
     IVFIndex
     (
-        vector<vector<float>>& cluster_embeddings, // 128 clusters - each cluster has x embeddings of size 384 each
-        vector<vector<int>>& cluster_mappings,
-        vector<float>& cluster_centroids,
+        vector<vector<float>> cluster_embeddings, // 128 clusters - each cluster has x embeddings of size 384 each
+        vector<vector<int>> cluster_mappings,
+        vector<float> cluster_centroids,
         int n_probe = 8
     ) : cluster_embeddings(cluster_embeddings),
         cluster_mappings(cluster_mappings),
@@ -103,7 +103,7 @@ class IVFIndex
     vector<pair<float, int>> search(const vector<float>& query, int k, bool use_cuda = false) 
     {
         // Find top centroids
-        auto top_centroids = this.findSimilar(cluster_centroids, query, num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
+        auto top_centroids = this -> findSimilar(cluster_centroids, query, num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
 
         // Min-heap to store top k results
         //similarity, index
@@ -120,7 +120,7 @@ class IVFIndex
 
             // Find similar embeddings in the cluster
             int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
-            auto similarities = this.find_similar(cluster_embeddings[cluster], query, elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
+            auto similarities = this -> find_similar(cluster_embeddings[cluster], query, elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
 
             for (const auto& sim : similarities) 
             {
@@ -264,7 +264,7 @@ void main()
     // Load pretrained index
     IVFIndex index = IVFIndex::from_pretrained("/scratch/pvg2018/embeddings_data");
 
-    string filepath = "./queries_data/query1.bin";
+    string filePath = "./queries_data/query1.bin";
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
 
     if (!file.is_open()) {
