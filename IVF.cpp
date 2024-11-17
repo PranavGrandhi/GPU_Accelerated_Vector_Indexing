@@ -103,7 +103,7 @@ class IVFIndex
     vector<pair<float, int>> search(vector<float>& query, int k, bool use_cuda = false) 
     {
         // Find top centroids
-        auto top_centroids = findSimilar(cluster_centroids.data(), query, num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
+        auto top_centroids = findSimilar(cluster_centroids.data(), query.data(), num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
 
         // Min-heap to store top k results
         //similarity, index
@@ -120,7 +120,7 @@ class IVFIndex
 
             // Find similar embeddings in the cluster
             int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
-            auto similarities = findSimilar(cluster_embeddings[cluster].data(), query, elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
+            auto similarities = findSimilar(cluster_embeddings[cluster].data(), query.data(), elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
 
             for (const auto& sim : similarities) 
             {
