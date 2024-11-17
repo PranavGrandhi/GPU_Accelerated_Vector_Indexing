@@ -37,12 +37,12 @@ class IVFIndex
 
     //returns the top k centroids
     vector<pair<float, int>> findSimilar(
-    const float* flattenedEmbeddings,
-    const float* query,
-    size_t numEmbeddings,
-    size_t vectorSize,
-    size_t topK,
-    size_t batchSize,
+    float* flattenedEmbeddings,
+    float* query,
+    int numEmbeddings,
+    int vectorSize,
+    int topK,
+    int batchSize,
     bool useCuda) 
     {
         if (batchSize == 0) 
@@ -100,10 +100,10 @@ class IVFIndex
     }
 
     //Returns top k results from searching top n_probe centroids
-    vector<pair<float, int>> search(const vector<float>& query, int k, bool use_cuda = false) 
+    vector<pair<float, int>> search(vector<float>& query, int k, bool use_cuda = false) 
     {
         // Find top centroids
-        auto top_centroids = findSimilar(cluster_centroids.data(), query, num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
+        auto top_centroids = findSimilar(cluster_centroids.data(), query.data(), num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
 
         // Min-heap to store top k results
         //similarity, index
@@ -120,7 +120,7 @@ class IVFIndex
 
             // Find similar embeddings in the cluster
             int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
-            auto similarities = findSimilar(cluster_embeddings[cluster].data(), query, elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
+            auto similarities = findSimilar(cluster_embeddings[cluster].data(), query.data(), elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
 
             for (const auto& sim : similarities) 
             {
@@ -240,9 +240,9 @@ class IVFIndex
 
     private:
     // Member variables
-    vector<vector<vector<float>>> cluster_embeddings;
+    vector<vector<float>> cluster_embeddings; 
     vector<vector<int>> cluster_mappings;
-    vector<vector<float>> cluster_centroids;
+    vector<float> cluster_centroids; 
     int n_probe;
 
     // Placeholder for similarity_search (to be implemented separately)
