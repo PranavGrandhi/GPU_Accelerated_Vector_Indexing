@@ -284,7 +284,7 @@ int main()
     std::vector<float> query(fileSize / sizeof(float));
 
     // Read the data into the vector
-    if (!file.read(reinterpret_cast<char*>(data.data()), fileSize)) {
+    if (!file.read(reinterpret_cast<char*>(query.data()), fileSize)) {
         throw std::runtime_error("Failed to read file: " + filePath);
     }
 
