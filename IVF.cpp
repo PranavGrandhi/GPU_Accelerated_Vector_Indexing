@@ -36,7 +36,7 @@ class IVFIndex
         n_probe(n_probe) {}
 
     //returns the top k centroids
-    vector<pair<float, int> findSimilar(
+    vector<pair<float, int>> findSimilar(
     const float* flattenedEmbeddings,
     const float* query,
     size_t numEmbeddings,
@@ -103,7 +103,7 @@ class IVFIndex
     vector<pair<float, int>> search(const vector<float>& query, int k, bool use_cuda = false) 
     {
         // Find top centroids
-        auto top_centroids = this -> findSimilar(cluster_centroids, query, num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
+        auto top_centroids = findSimilar(cluster_centroids, query, num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
 
         // Min-heap to store top k results
         //similarity, index
@@ -120,7 +120,7 @@ class IVFIndex
 
             // Find similar embeddings in the cluster
             int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
-            auto similarities = this -> find_similar(cluster_embeddings[cluster], query, elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
+            auto similarities = find_similar(cluster_embeddings[cluster], query, elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
 
             for (const auto& sim : similarities) 
             {
@@ -259,7 +259,7 @@ class IVFIndex
     } similarity_search;
 };
 
-void main()
+int main()
 {
     // Load pretrained index
     IVFIndex index = IVFIndex::from_pretrained("/scratch/pvg2018/embeddings_data");
