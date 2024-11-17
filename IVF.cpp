@@ -240,9 +240,9 @@ class IVFIndex
 
     private:
     // Member variables
-    vector<vector<vector<float>>> cluster_embeddings;
+    vector<vector<float>> cluster_embeddings; 
     vector<vector<int>> cluster_mappings;
-    vector<vector<float>> cluster_centroids;
+    vector<float> cluster_centroids; 
     int n_probe;
 
     // Placeholder for similarity_search (to be implemented separately)
