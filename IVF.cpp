@@ -26,9 +26,9 @@ class IVFIndex
     public:
     IVFIndex
     (
-        const vector<vector<float>>& cluster_embeddings, // 128 clusters - each cluster has x embeddings of size 384 each
-        const vector<vector<int>>& cluster_mappings,
-        const vector<float>& cluster_centroids,
+        vector<vector<float>>& cluster_embeddings, // 128 clusters - each cluster has x embeddings of size 384 each
+        vector<vector<int>>& cluster_mappings,
+        vector<float>& cluster_centroids,
         int n_probe = 8
     ) : cluster_embeddings(cluster_embeddings),
         cluster_mappings(cluster_mappings),
@@ -49,7 +49,6 @@ class IVFIndex
         {
             batchSize = numEmbeddings;
         }
-
 
         // min heap to keep track of top k vectors
         typedef std::priority_queue<
@@ -104,7 +103,7 @@ class IVFIndex
     vector<pair<float, int>> search(const vector<float>& query, int k, bool use_cuda = false) 
     {
         // Find top centroids
-        auto top_centroids = findSimilar(cluster_centroids, query, num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
+        auto top_centroids = this.findSimilar(cluster_centroids, query, num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
 
         // Min-heap to store top k results
         //similarity, index
@@ -121,7 +120,7 @@ class IVFIndex
 
             // Find similar embeddings in the cluster
             int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
-            auto similarities = similarity_search.find_similar(cluster_embeddings[cluster], query, elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
+            auto similarities = this.find_similar(cluster_embeddings[cluster], query, elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
 
             for (const auto& sim : similarities) 
             {
@@ -167,7 +166,7 @@ class IVFIndex
         size_t n_clusters = cluster_mappings.size();
 
         // Load cluster embeddings
-        ector<vector<float>> cluster_embeddings(n_clusters);
+        vector<vector<float>> cluster_embeddings(n_clusters);
 
         for (size_t i = 0; i < n_clusters; ++i) 
         {
