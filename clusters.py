@@ -3,7 +3,12 @@ import json
 import numpy as np
 from sklearn.cluster import KMeans
 
-from utils import args_parser
+import argparse
+
+def args_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("data_dir")
+    return parser
 
 if __name__ == "__main__":
     parser = args_parser()
