@@ -199,7 +199,7 @@ class IVFIndex
     static IVFIndex from_pretrained(const string& data_dir, int n_probe = 8) 
     {
         // Load cluster mappings from JSON
-        ifstream mapping_file(data_dir + "/cluster_mappings_Small_Data.json");
+        ifstream mapping_file(data_dir + "/cluster_mappings.json");
         json cluster_mappings_json;
         mapping_file >> cluster_mappings_json;
         mapping_file.close();
@@ -215,7 +215,7 @@ class IVFIndex
 
         for (int i = 0; i < n_clusters; ++i) 
         {
-            string filename = data_dir + "/cluster_embeddings_" + to_string(i) + "_Small_Data" + ".bin";
+            string filename = data_dir + "/cluster_embeddings_" + to_string(i) +".bin";
 
             // Read binary file
             ifstream file(filename, ios::binary | ios::ate);
@@ -246,7 +246,7 @@ class IVFIndex
         }
 
         // Load cluster centroids
-        string centroids_filename = data_dir + "/cluster_centroids_Small_Data.bin";
+        string centroids_filename = data_dir + "/cluster_centroids.bin";
         ifstream centroids_file(centroids_filename, ios::binary | ios::ate);
         if (!centroids_file.is_open()) 
         {
