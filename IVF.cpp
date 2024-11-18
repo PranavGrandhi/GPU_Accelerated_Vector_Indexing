@@ -57,7 +57,32 @@ class IVFIndex
             greater<pair<float, int>>
         > myheap;
         myheap heap;
-
+        if(!useCuda)
+        {
+            // compute cosine similarity on CPU
+            for (int i = 0; i < numEmbeddings; i++) 
+            {
+                float score = 0;
+                for (int j = 0; j < vectorSize; j++) 
+                {
+                    score += query[j] * flattenedEmbeddings[i * vectorSize + j];
+                }
+                heap.push(make_pair(score, i));
+                if (heap.size() > topK) 
+                {
+                    heap.pop();
+                }
+            }
+            vector<pair<float, int>> result;
+            myheap tempHeap = heap;
+            while (!tempHeap.empty()) 
+            {
+                result.push_back(tempHeap.top());
+                tempHeap.pop();
+            }
+            std::reverse(result.begin(), result.end());
+            return result;
+        }
         // loop over chunks in dataset
         for (int i = 0; i < numEmbeddings; i += batchSize) 
         {
