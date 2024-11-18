@@ -215,7 +215,7 @@ class IVFIndex
 
         for (int i = 0; i < n_clusters; ++i) 
         {
-            string filename = data_dir + "/cluster_embeddings_" + to_string(i) + ".bin";
+            string filename = data_dir + "/cluster_embeddings_" + to_string(i) +".bin";
 
             // Read binary file
             ifstream file(filename, ios::binary | ios::ate);
