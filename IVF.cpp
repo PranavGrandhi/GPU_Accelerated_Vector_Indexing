@@ -5,6 +5,7 @@
 #include <queue>
 #include <algorithm>
 #include <unordered_map>
+#include <chrono>
 #include "json.hpp"       // For JSON parsing
 
 using json = nlohmann::json;
@@ -21,6 +22,37 @@ void computeCosineSimilarities(
     size_t vectorDim
 );
 
+void computeCosineSimilaritiesCPU(
+    const float* batchVectors,
+    const float* queryVector,
+    float* similarityScores,
+    size_t numVectors,
+    size_t vectorDim) 
+{
+    // Compute the norm of the query vector
+    float queryNorm = 0.0f;
+    for (size_t i = 0; i < vectorDim; ++i) 
+    {
+        float val = queryVector[i];
+        queryNorm += val * val;
+    }
+    queryNorm = sqrtf(queryNorm);
+
+    // Compute cosine similarity for each batch vector
+    for (size_t vecIdx = 0; vecIdx < numVectors; ++vecIdx) 
+    {
+        float dotProduct = 0.0f;
+        float batchNorm = 0.0f;
+        for (size_t i = 0; i < vectorDim; ++i) {
+            float batchVal = batchVectors[vecIdx * vectorDim + i];
+            float queryVal = queryVector[i];
+            dotProduct += batchVal * queryVal;
+            batchNorm += batchVal * batchVal;
+        }
+        batchNorm = sqrtf(batchNorm);
+        similarityScores[vecIdx] = dotProduct / (batchNorm * queryNorm + 1e-8f);
+    }
+}
 class IVFIndex 
 {
     public:
@@ -65,13 +97,26 @@ class IVFIndex
 
             // get cosine similarity on this batch
             vector<float> scores(currentBatchSize);
-            computeCosineSimilarities(
+            if(useCuda)
+            {
+                computeCosineSimilarities(
                     flattenedEmbeddings + i * vectorSize,
                     query,
                     scores.data(),
                     currentBatchSize,
                     vectorSize
                 );
+            }
+            else
+            {
+                computeCosineSimilaritiesCPU(
+                    flattenedEmbeddings + i * vectorSize,
+                    query,
+                    scores.data(),
+                    currentBatchSize,
+                    vectorSize
+                );
+            }
 
             // update heap to keep track of top k
             for (int j = 0; j < currentBatchSize; j++) 
@@ -290,10 +335,31 @@ int main()
 
     // Search
     int k = 5;
-    vector<pair<float, int>> results = index.search(query, k);
+    vector<pair<float, int>> results, results2;
 
-    // Print results
+    // Measure time for GPU search
+    auto start_gpu = chrono::high_resolution_clock::now();
+    results = index.search(query, k, true);
+    auto end_gpu = chrono::high_resolution_clock::now();
+    auto gpu_duration = chrono::duration_cast<chrono::milliseconds>(end_gpu - start_gpu);
+
+    // Measure time for CPU search
+    auto start_cpu = chrono::high_resolution_clock::now();
+    results2 = index.search(query, k, false);
+    auto end_cpu = chrono::high_resolution_clock::now();
+    auto cpu_duration = chrono::duration_cast<chrono::milliseconds>(end_cpu - start_cpu);
+
+    // Print GPU Results
+    cout << "GPU Results: " << endl;
     for (const auto& result : results) {
         cout << result.first << ", " << result.second << endl;
     }
+    cout << "GPU Search Time: " << gpu_duration.count() << " ms" << endl;
+
+    // Print CPU Results
+    cout << "CPU Results: " << endl;
+    for (const auto& result : results2) {
+        cout << result.first << ", " << result.second << endl;
+    }
+    cout << "CPU Search Time: " << cpu_duration.count() << " ms" << endl;
 }
