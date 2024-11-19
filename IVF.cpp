@@ -5,6 +5,7 @@
 #include <queue>
 #include <algorithm>
 #include <unordered_map>
+#include <climits>
 #include "json.hpp"       // For JSON parsing
 
 using json = nlohmann::json;
