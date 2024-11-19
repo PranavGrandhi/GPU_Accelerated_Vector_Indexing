@@ -33,9 +33,13 @@ To compile and run the program on a CUDA-enabled machine:
 
 ```bash
 ssh to cuda5.cims.nyu.edu
+git clone https://github.com/PranavGrandhi/GPU_Accelerated_Vector_Indexing.git
+cd GPU_Accelerated_Vector_Indexing
+
 module load cuda-12.4
 nvcc IVF.cpp cosine_similarity.cu -o IVF
 ./IVF $n_probe $kernel_mode $Sequential_search $cuda_coarse $cuda_fine
+
 Example: ./IVF 40 Atomic true false true
 ```
 
