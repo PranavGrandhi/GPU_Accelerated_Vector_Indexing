@@ -161,7 +161,8 @@ class IVFIndex
     int vectorSize,
     int topK,
     int batchSize,
-    bool useCuda) 
+    bool useCuda,
+    string mode) 
     {
         if (batchSize == 0) 
         {
@@ -185,13 +186,26 @@ class IVFIndex
             vector<float> scores(currentBatchSize);
             if(useCuda)
             {
-                computeCosineSimilaritiesOptimized(
+                if(mode == "Atomic")
+                {
+                    computeCosineSimilaritiesAtomicOptimized(
+                        flattenedEmbeddings + i * vectorSize,
+                        query,
+                        scores.data(),
+                        currentBatchSize,
+                        vectorSize
+                    );
+                }
+                else if(mode == "NonAtomic")
+                {
+                    computeCosineSimilaritiesOptimized(
                     flattenedEmbeddings + i * vectorSize,
                     query,
                     scores.data(),
                     currentBatchSize,
                     vectorSize
-                );
+                    );
+                }
             }
             else
             {
@@ -231,10 +245,10 @@ class IVFIndex
     }
 
     //Returns top k results from searching top n_probe centroids
-    vector<pair<float, int>> search(vector<float>& query, int k, bool use_cuda = false) 
+    vector<pair<float, int>> search(vector<float>& query, int k, bool use_cuda, string mode = "Atomic") 
     {
         // Find top centroids
-        auto top_centroids = findSimilar(cluster_centroids.data(), query.data(), num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
+        auto top_centroids = findSimilar(cluster_centroids.data(), query.data(), num_clusters, embedding_dim, n_probe, batch_size, use_cuda, mode);
 
         // Min-heap to store top k results
         //similarity, index
@@ -251,7 +265,7 @@ class IVFIndex
 
             // Find similar embeddings in the cluster
             int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
-            auto similarities = findSimilar(cluster_embeddings[cluster].data(), query.data(), elements_in_cluster, embedding_dim, k, batch_size, use_cuda);
+            auto similarities = findSimilar(cluster_embeddings[cluster].data(), query.data(), elements_in_cluster, embedding_dim, k, batch_size, use_cuda , mode);
 
             for (const auto& sim : similarities) 
             {
@@ -390,11 +404,23 @@ class IVFIndex
     } similarity_search;
 };
 
-int main()
+int main(int argc, char* argv[])
 {
-    cout << "Startingggg" << endl;
+    if (argc < 3) {
+        cerr << "Usage: " << argv[0] << " <n_probe> <Atomic|NonAtomic>" << endl;
+        return 1;
+    }
+
+    int n_probe = stoi(argv[1]);
+    string mode = argv[2];
+
+    if (mode != "Atomic" && mode != "NonAtomic") {
+        cerr << "Error: Mode must be either 'Atomic' or 'NonAtomic'." << endl;
+        return 1;
+    }
+
     // Load pretrained index
-    IVFIndex index = IVFIndex::from_pretrained("/scratch/pvg2018/cluster_data", 20);
+    IVFIndex index = IVFIndex::from_pretrained("/scratch/pvg2018/cluster_data", n_probe);
 
     string filePath = "./queries_data/query1.bin";
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
@@ -431,13 +457,13 @@ int main()
 
     // Measure time for GPU search
     auto start_gpu = chrono::high_resolution_clock::now();
-    results = index.search(query, k, true);
+    results = index.search(query, k, true, mode);
     auto end_gpu = chrono::high_resolution_clock::now();
     auto gpu_duration = chrono::duration_cast<chrono::milliseconds>(end_gpu - start_gpu);
 
     // Measure time for CPU search
     auto start_cpu = chrono::high_resolution_clock::now();
-    results2 = index.search(query, k, false);
+    results2 = index.search(query, k, false, mode);
     auto end_cpu = chrono::high_resolution_clock::now();
     auto cpu_duration = chrono::duration_cast<chrono::milliseconds>(end_cpu - start_cpu);
 
