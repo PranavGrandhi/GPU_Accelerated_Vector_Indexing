@@ -25,10 +25,17 @@ We utilize the Wikipedia dataset containing plain text from November 2020. You c
 ## Compilation and Execution
 
 To compile and run the program on a CUDA-enabled machine:
+The following arguments need to be passed to the executable:
+1. n_probe: Value from 1 to 128 which denotes how many top clusters can be chosen in the coarse search to do the fine search in
+2. Which kernel mode: This defines which cuda kernel will run. It can either be "Atomic", or "NonAtomic". These are the 2 different types of kernels we use to compute the coarse and fine search
+3. Sequential Search: This can be true or false. "true" stands for sequential search and "false" for non sequential search. This defines if each cluster is handled by a seperate kernel or all the clusters are combined into one and a single kernel handles them all.
+4. Use CUDA coarse: This can be true or false. This stands for using the CPU or GPU for the coarse search part (find the top n_probe cluster centroids).
+5. Use CUDA fine: This can be true or false. This stands for using the CPU or GPU for the fine search part (find the top k closest elements in the top n_probe clusters).
 
 ```bash
 nvcc IVF.cpp cosine_similarity.cu -o IVF
-./IVF
+./IVF $n_probe $kernel_mode $Sequential_search $cuda_coarse $cuda_fine
+Example: ./IVF 40 Atomic true false true
 ```
 
 Upon execution, the program will output the article most relevant to the input query.
