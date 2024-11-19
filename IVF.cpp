@@ -11,7 +11,7 @@ using json = nlohmann::json;
 using namespace std;
 int num_clusters = 128;
 int embedding_dim = 384;
-int batch_size = 65536;
+int batch_size = INT_MAX;
 
 // void computeCosineSimilarities(
 //     const float* hostBatchVectors,
