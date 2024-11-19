@@ -1,7 +1,7 @@
 
-# GPU Accelerated Vector Indexing
+# GPU Accelerated Vector Database Querying
 
-This project demonstrates efficient vector indexing using GPU acceleration, applied to a large-scale dataset of Wikipedia articles. The process involves embedding generation, clustering, and approximate nearest neighbor search (GPU accelerated) to retrieve relevant articles based on input queries.
+This project demonstrates efficient vector database querying using GPU acceleration, applied to a large-scale dataset of Wikipedia articles. The process involves embedding generation, clustering, and approximate nearest neighbor search (GPU accelerated) to retrieve relevant articles based on input queries.
 
 ## Dataset
 
