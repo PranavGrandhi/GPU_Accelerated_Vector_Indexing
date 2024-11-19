@@ -21,6 +21,6 @@ queries = [
 # Generate embeddings and save each to a .npy file
 for i, query in enumerate(queries, 1):
     embeddings = model.encode([query], device="cuda", batch_size=2)
-    filename = f"./queries_data/query{i}.npy"
+    filename = f"../queries_data/query{i}.npy"
     np.save(filename, embeddings)
     print(f"Embeddings for Query {i} have been saved to {filename}")
