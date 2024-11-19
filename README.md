@@ -9,7 +9,7 @@ We utilize the Wikipedia dataset containing plain text from November 2020. You c
 
 [Plain Text Wikipedia 202011 Dataset](https://www.kaggle.com/datasets/ltcmdrdata/plain-text-wikipedia-202011/data)
 
-## Workflow
+## Workflow (If you have access to CUDA5, skip to compilation and execution program. The below preprocessing is done and saved in CUDA5 /scratch/pvg2018/ if you dont have access, email pvg2018@nyu.edu or ax2119@nyu.edu or sc10670@nyu.edu)
 
 1. **Embedding Generation**: Use `embedding.py` to generate vector embeddings for the Wikipedia articles.
 2. **Clustering**: Apply K-means clustering with `cluster.py` to group the embeddings into 128 clusters. Save the clustered data in a designated folder.
