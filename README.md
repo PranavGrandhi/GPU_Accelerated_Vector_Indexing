@@ -20,12 +20,6 @@ We utilize the Wikipedia dataset containing plain text from November 2020. You c
 
 ## Configurable Parameters
 
-- **Top K Centroids**: The user can modify the number of top centroids by changing the value passed to the `pretrained()` function in the `main()` function of `IVF.cpp`.
-- **Top K Closest Matches**: Adjust the number of closest elements matched by modifying the relevant parameter in `IVF.cpp`.
-
-## Compilation and Execution
-
-To compile and run the program on a CUDA-enabled machine:
 The following arguments need to be passed to the executable:
 1. n_probe: Value from 1 to 128 which denotes how many top clusters can be chosen in the coarse search to do the fine search in
 2. Which kernel mode: This defines which cuda kernel will run. It can either be "Atomic", or "NonAtomic". These are the 2 different types of kernels we use to compute the coarse and fine search
@@ -33,7 +27,13 @@ The following arguments need to be passed to the executable:
 4. Use CUDA coarse: This can be true or false. This stands for using the CPU or GPU for the coarse search part (find the top n_probe cluster centroids).
 5. Use CUDA fine: This can be true or false. This stands for using the CPU or GPU for the fine search part (find the top k closest elements in the top n_probe clusters).
 
+## Compilation and Execution
+
+To compile and run the program on a CUDA-enabled machine:
+
 ```bash
+ssh to cuda5.cims.nyu.edu
+module load cuda-12.4
 nvcc IVF.cpp cosine_similarity.cu -o IVF
 ./IVF $n_probe $kernel_mode $Sequential_search $cuda_coarse $cuda_fine
 Example: ./IVF 40 Atomic true false true
