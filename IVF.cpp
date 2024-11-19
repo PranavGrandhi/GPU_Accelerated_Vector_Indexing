@@ -5,7 +5,6 @@
 #include <queue>
 #include <algorithm>
 #include <unordered_map>
-#include <chrono>
 #include "json.hpp"       // For JSON parsing
 
 using json = nlohmann::json;
@@ -14,13 +13,100 @@ int num_clusters = 128;
 int embedding_dim = 384;
 int batch_size = 65536;
 
-void computeCosineSimilarities(
+// void computeCosineSimilarities(
+//     const float* hostBatchVectors,
+//     const float* hostQueryVector,
+//     float* hostSimilarityScores,
+//     size_t numVectors,
+//     size_t vectorDim
+// );
+
+void computeCosineSimilaritiesOptimized(
     const float* hostBatchVectors,
     const float* hostQueryVector,
     float* hostSimilarityScores,
     size_t numVectors,
     size_t vectorDim
 );
+
+// mapBack
+class mapBack {
+private:
+    std::string data_dir;
+    std::vector<std::pair<std::string, int>> idx2file;
+    std::unordered_map<std::string, json> file_cache;
+
+public:
+    // Constructor
+    mapBack(const std::string &data_dir) : data_dir(data_dir) {
+        std::ifstream file_lengths_file(data_dir + "/file_lengths.json");
+        if (!file_lengths_file.is_open()) {
+            throw std::runtime_error("Could not open file_lengths.json");
+        }
+
+        json file_lengths_json;
+        file_lengths_file >> file_lengths_json;
+        file_lengths_file.close();
+
+        // Iterate over the numerical keys of the JSON object
+        int file_count = 0;
+        for (const auto &[key, value] : file_lengths_json.items()) {
+            // Each `value` is a list where:
+            // value[0] = filename
+            // value[1] = number of articles
+            std::string filename = value[0];
+            int num_articles = value[1];
+
+            if (file_count%100 == 0) cout << file_count << " number of file articles mapped" << endl;
+            file_count++;
+
+            for (int i = 0; i < num_articles; ++i) {
+                // if (i % 1000 == 0) {
+                //     std::cout << i << " articles done for this filename: " << filename << ":: and num_articles: " << num_articles << std::endl;
+                // }
+                idx2file.emplace_back(filename, i);
+            }
+        }
+    }
+
+    // Reads a file and caches the result
+    const json &read_file(const std::string &filename) {
+        // Check if the file is already cached
+        if (file_cache.find(filename) == file_cache.end()) {
+            std::ifstream file(data_dir + "/wikidata/enwiki20201020/" + filename);
+            if (!file.is_open()) {
+                throw std::runtime_error("Could not open file: " + filename);
+            }
+
+            json json_data;
+            file >> json_data;
+            file.close();
+
+            // Cache the file
+            file_cache[filename] = json_data;
+        }
+
+        return file_cache[filename];
+    }
+
+    // Gets the text corresponding to a given index
+    std::string get(int idx) {
+        if (idx < 0 || idx >= idx2file.size()) {
+            throw std::out_of_range("Index out of range");
+        }
+
+        const auto &[filename, offset] = idx2file[idx];
+
+        const json &data = read_file(filename);
+
+        if (offset < 0 || offset >= data.size()) {
+            throw std::out_of_range("Offset out of range in file: " + filename);
+        }
+
+        return data[offset]["text"].get<std::string>();
+    }
+};
+
 
 void computeCosineSimilaritiesCPU(
     const float* batchVectors,
@@ -61,7 +147,7 @@ class IVFIndex
         vector<vector<float>> cluster_embeddings, // 128 clusters - each cluster has x embeddings of size 384 each
         vector<vector<int>> cluster_mappings,
         vector<float> cluster_centroids,
-        int n_probe = 8
+        int n_probe
     ) : cluster_embeddings(cluster_embeddings),
         cluster_mappings(cluster_mappings),
         cluster_centroids(cluster_centroids),
@@ -99,7 +185,7 @@ class IVFIndex
             vector<float> scores(currentBatchSize);
             if(useCuda)
             {
-                computeCosineSimilarities(
+                computeCosineSimilaritiesOptimized(
                     flattenedEmbeddings + i * vectorSize,
                     query,
                     scores.data(),
@@ -148,7 +234,7 @@ class IVFIndex
     vector<pair<float, int>> search(vector<float>& query, int k, bool use_cuda = false) 
     {
         // Find top centroids
-        auto top_centroids = findSimilar(cluster_centroids.data(), query.data(), num_clusters, embedding_dim, n_probe, batch_size, use_cuda);
+        auto top_centroids = findSimilar(cluster_centroids.data(), query.data(), num_clusters, embedding_dim, n_probe, batch_size, false);
 
         // Min-heap to store top k results
         //similarity, index
@@ -196,7 +282,7 @@ class IVFIndex
     }
 
     // Static method to load pretrained index
-    static IVFIndex from_pretrained(const string& data_dir, int n_probe = 8) 
+    static IVFIndex from_pretrained(const string& data_dir, int n_probe) 
     {
         // Load cluster mappings from JSON
         ifstream mapping_file(data_dir + "/cluster_mappings.json");
@@ -306,8 +392,9 @@ class IVFIndex
 
 int main()
 {
+    cout << "Startingggg" << endl;
     // Load pretrained index
-    IVFIndex index = IVFIndex::from_pretrained("/scratch/pvg2018/cluster_data");
+    IVFIndex index = IVFIndex::from_pretrained("/scratch/pvg2018/cluster_data", 20);
 
     string filePath = "./queries_data/query1.bin";
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
@@ -333,6 +420,11 @@ int main()
         throw std::runtime_error("Failed to read file: " + filePath);
     }
 
+    // store the DB mapping back the string from idx
+    cout << "Loading mapBack" << endl;
+    mapBack map_back("/scratch/pvg2018");
+    cout << "Loaded mapBack" << endl;
+
     // Search
     int k = 5;
     vector<pair<float, int>> results, results2;
@@ -352,14 +444,18 @@ int main()
     // Print GPU Results
     cout << "GPU Results: " << endl;
     for (const auto& result : results) {
-        cout << result.first << ", " << result.second << endl;
+        std::string text = map_back.get(result.second);
+        std::string sub_text = text.substr(0, 200);
+        cout << result.first << ", " << result.second << "::: Text: " << sub_text << endl;
     }
     cout << "GPU Search Time: " << gpu_duration.count() << " ms" << endl;
 
     // Print CPU Results
     cout << "CPU Results: " << endl;
     for (const auto& result : results2) {
-        cout << result.first << ", " << result.second << endl;
+        std::string text = map_back.get(result.second);
+        std::string sub_text = text.substr(0, 200);
+        cout << result.first << ", " << result.second << "::: Text: " << sub_text << endl;
     }
     cout << "CPU Search Time: " << cpu_duration.count() << " ms" << endl;
 }
