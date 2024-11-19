@@ -29,6 +29,14 @@ void computeCosineSimilaritiesOptimized(
     size_t vectorDim
 );
 
+void computeCosineSimilaritiesAtomicOptimized(
+    const float* dataBatch,
+    const float* queryVector,
+    float* similarityScores,
+    size_t numVectors,
+    size_t dim
+);
+
 // mapBack
 class mapBack {
 private:
