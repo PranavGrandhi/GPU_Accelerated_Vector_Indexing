@@ -254,13 +254,24 @@ class IVFIndex
     }
 
     //Returns top k results from searching top n_probe centroids
-    vector<pair<float, int>> search(vector<float>& query, int k, bool use_cuda, string mode = "Atomic") 
+    vector<pair<float, int>> search(vector<float>& query, int k, bool use_cuda_coarse, bool use_cuda_fine, string mode = "Atomic", bool sequential_fine_search = true) 
     {
         // Find top centroids
-        auto top_centroids = findSimilar(cluster_centroids.data(), query.data(), num_clusters, embedding_dim, n_probe, batch_size, use_cuda, mode);
+    auto top_centroids = findSimilar(
+        cluster_centroids.data(), 
+        query.data(), 
+        num_clusters, 
+        embedding_dim, 
+        n_probe, 
+        batch_size, 
+        use_cuda_coarse,
+        mode
+    );
 
+    if (sequential_fine_search)
+    {
+        // Original behavior: Process each cluster sequentially
         // Min-heap to store top k results
-        //similarity, index
         auto cmp = [](const pair<float, int>& left, const pair<float, int>& right) 
         {
             return left.first > right.first; 
@@ -274,7 +285,16 @@ class IVFIndex
 
             // Find similar embeddings in the cluster
             int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
-            auto similarities = findSimilar(cluster_embeddings[cluster].data(), query.data(), elements_in_cluster, embedding_dim, k, batch_size, use_cuda , mode);
+            auto similarities = findSimilar(
+                cluster_embeddings[cluster].data(), 
+                query.data(), 
+                elements_in_cluster, 
+                embedding_dim, 
+                k, 
+                batch_size, 
+                use_cuda_fine,
+                mode
+            );
 
             for (const auto& sim : similarities) 
             {
@@ -285,7 +305,8 @@ class IVFIndex
                 if (min_heap.size() < k) 
                 {
                     min_heap.emplace(score, mapping_value);
-                } else if (score > min_heap.top().first) 
+                } 
+                else if (score > min_heap.top().first) 
                 {
                     min_heap.pop();
                     min_heap.emplace(score, mapping_value);
@@ -303,6 +324,91 @@ class IVFIndex
         reverse(results.begin(), results.end()); 
         return results;
     }
+    else
+    {
+        // New behavior: Combine embeddings from top centroids and process once
+        vector<float> combined_embeddings;
+        vector<int> combined_mappings;
+        int total_elements = 0;
+
+        // First, calculate total number of embeddings to reserve space
+        for (const auto& centroid : top_centroids)
+        {
+            int cluster = centroid.second;
+            int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
+            total_elements += elements_in_cluster;
+        }
+
+        combined_embeddings.reserve(total_elements * embedding_dim);
+        combined_mappings.reserve(total_elements);
+
+        // Combine embeddings and mappings from top centroids
+        for (const auto& centroid : top_centroids)
+        {
+            int cluster = centroid.second;
+            const vector<float>& cluster_emb = cluster_embeddings[cluster];
+            const vector<int>& cluster_map = cluster_mappings[cluster];
+
+            combined_embeddings.insert(
+                combined_embeddings.end(), 
+                cluster_emb.begin(), 
+                cluster_emb.end()
+            );
+            combined_mappings.insert(
+                combined_mappings.end(), 
+                cluster_map.begin(), 
+                cluster_map.end()
+            );
+        }
+
+        // Find similarities using the combined embeddings
+        auto similarities = findSimilar(
+            combined_embeddings.data(), 
+            query.data(), 
+            total_elements, 
+            embedding_dim, 
+            k, 
+            batch_size, 
+            use_cuda_fine,
+            mode
+        );
+
+        // Min-heap to store top k results
+        auto cmp = [](const pair<float, int>& left, const pair<float, int>& right) 
+        {
+            return left.first > right.first; 
+        };
+        priority_queue<pair<float, int>, vector<pair<float, int>>, decltype(cmp)> min_heap(cmp);
+
+        // Map similarities back to original indices
+        for (const auto& sim : similarities) 
+        {
+            float score = sim.first;
+            int idx = sim.second;
+            int mapping_value = combined_mappings[idx];
+
+            if (min_heap.size() < k) 
+            {
+                min_heap.emplace(score, mapping_value);
+            } 
+            else if (score > min_heap.top().first) 
+            {
+                min_heap.pop();
+                min_heap.emplace(score, mapping_value);
+            }
+        }
+
+        // Extract results from the heap
+        vector<pair<float, int>> results;
+        while (!min_heap.empty()) 
+        {
+            results.push_back(min_heap.top());
+            min_heap.pop();
+        }
+        reverse(results.begin(), results.end()); 
+        return results;
+    }
+}
 
     // Static method to load pretrained index
     static IVFIndex from_pretrained(const string& data_dir, int n_probe) 
@@ -415,18 +521,94 @@ class IVFIndex
 
 int main(int argc, char* argv[])
 {
-    if (argc < 3) {
-        cerr << "Usage: " << argv[0] << " <n_probe> <Atomic|NonAtomic>" << endl;
+    // Check for the minimum number of command-line arguments
+    if (argc < 4) {
+        cerr << "Usage: " << argv[0] << " <n_probe> <Atomic|NonAtomic> <SequentialFineSearch> [--use_cuda_coarse=<true|false>] [--use_cuda_fine=<true|false>]" << endl;
+        cerr << " - <n_probe>: Number of centroids to probe (integer)" << endl;
+        cerr << " - <Atomic|NonAtomic>: Mode of operation" << endl;
+        cerr << " - <SequentialFineSearch>: true or false" << endl;
+        cerr << " - [--use_cuda_coarse=<true|false>]: (Optional) Use CUDA for coarse search" << endl;
+        cerr << " - [--use_cuda_fine=<true|false>]: (Optional) Use CUDA for fine search" << endl;
         return 1;
     }
 
-    int n_probe = stoi(argv[1]);
-    string mode = argv[2];
+    // Parse the first argument: n_probe
+    int n_probe;
+    try {
+        n_probe = stoi(argv[1]);
+    } catch (const invalid_argument& e) {
+        cerr << "Error: <n_probe> must be an integer." << endl;
+        return 1;
+    }
 
+    // Parse the second argument: mode
+    string mode = argv[2];
     if (mode != "Atomic" && mode != "NonAtomic") {
         cerr << "Error: Mode must be either 'Atomic' or 'NonAtomic'." << endl;
         return 1;
     }
+
+    // Parse the third argument: sequential_fine_search
+    string seq_fine_search_str = argv[3];
+    bool sequential_fine_search;
+
+    if (seq_fine_search_str == "true" || seq_fine_search_str == "1") {
+        sequential_fine_search = true;
+    }
+    else if (seq_fine_search_str == "false" || seq_fine_search_str == "0") {
+        sequential_fine_search = false;
+    }
+    else {
+        cerr << "Error: <SequentialFineSearch> must be 'true' or 'false'." << endl;
+        return 1;
+    }
+
+    // Initialize default values for the new flags
+    bool use_cuda_coarse = false;
+    bool use_cuda_fine = false;
+
+    // Parse additional flags
+    for (int i = 4; i < argc; ++i) {
+        string arg = argv[i];
+        if (arg.find("--use_cuda_coarse=") == 0) {
+            string value = arg.substr(strlen("--use_cuda_coarse="));
+            if (value == "true" || value == "1") {
+                use_cuda_coarse = true;
+            }
+            else if (value == "false" || value == "0") {
+                use_cuda_coarse = false;
+            }
+            else {
+                cerr << "Error: --use_cuda_coarse must be 'true' or 'false'." << endl;
+                return 1;
+            }
+        }
+        else if (arg.find("--use_cuda_fine=") == 0) {
+            string value = arg.substr(strlen("--use_cuda_fine="));
+            if (value == "true" || value == "1") {
+                use_cuda_fine = true;
+            }
+            else if (value == "false" || value == "0") {
+                use_cuda_fine = false;
+            }
+            else {
+                cerr << "Error: --use_cuda_fine must be 'true' or 'false'." << endl;
+                return 1;
+            }
+        }
+        else {
+            cerr << "Error: Unknown argument '" << arg << "'." << endl;
+            return 1;
+        }
+    }
+
+    // Display the parsed arguments (optional for debugging)
+    cout << "n_probe: " << n_probe << endl;
+    cout << "Mode: " << mode << endl;
+    cout << "Sequential Fine Search: " << (sequential_fine_search ? "True" : "False") << endl;
+    cout << "Use CUDA for Coarse Search: " << (use_cuda_coarse ? "True" : "False") << endl;
+    cout << "Use CUDA for Fine Search: " << (use_cuda_fine ? "True" : "False") << endl;
+
 
     // Load pretrained index
     IVFIndex index = IVFIndex::from_pretrained("/scratch/pvg2018/cluster_data", n_probe);
@@ -455,42 +637,29 @@ int main(int argc, char* argv[])
         throw std::runtime_error("Failed to read file: " + filePath);
     }
 
-    // store the DB mapping back the string from idx
-    cout << "Loading mapBack" << endl;
-    mapBack map_back("/scratch/pvg2018");
-    cout << "Loaded mapBack" << endl;
+    // // store the DB mapping back the string from idx
+    // cout << "Loading mapBack" << endl;
+    // mapBack map_back("/scratch/pvg2018");
+    // cout << "Loaded mapBack" << endl;
 
     // Search
     int k = 5;
     vector<pair<float, int>> results, results2;
 
     // Measure time for GPU search
-    auto start_gpu = chrono::high_resolution_clock::now();
-    results = index.search(query, k, true, mode);
-    auto end_gpu = chrono::high_resolution_clock::now();
-    auto gpu_duration = chrono::duration_cast<chrono::milliseconds>(end_gpu - start_gpu);
+    auto start_time = chrono::high_resolution_clock::now();
+    results = index.search(query, k, use_cuda_coarse, use_cuda_fine, mode);
+    auto end_time = chrono::high_resolution_clock::now();
+    auto time_duration = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
 
-    // Measure time for CPU search
-    auto start_cpu = chrono::high_resolution_clock::now();
-    results2 = index.search(query, k, false, mode);
-    auto end_cpu = chrono::high_resolution_clock::now();
-    auto cpu_duration = chrono::duration_cast<chrono::milliseconds>(end_cpu - start_cpu);
-
-    // Print GPU Results
-    cout << "GPU Results: " << endl;
+    // Print Results
+    if (use_cuda_coarse || use_cuda_fine) cout << "GPU Results: " << endl;
+    else cout << "CPU Results: " << endl;
     for (const auto& result : results) {
-        std::string text = map_back.get(result.second);
-        std::string sub_text = text.substr(0, 200);
-        cout << result.first << ", " << result.second << "::: Text: " << sub_text << endl;
+    //     std::string text = map_back.get(result.second);
+    //     std::string sub_text = text.substr(0, 200);
+    //     cout << result.first << ", " << result.second << "::: Text: " << sub_text << endl;
+        cout << result.first << ", " << result.second << endl;
     }
-    cout << "GPU Search Time: " << gpu_duration.count() << " ms" << endl;
-
-    // Print CPU Results
-    cout << "CPU Results: " << endl;
-    for (const auto& result : results2) {
-        std::string text = map_back.get(result.second);
-        std::string sub_text = text.substr(0, 200);
-        cout << result.first << ", " << result.second << "::: Text: " << sub_text << endl;
-    }
-    cout << "CPU Search Time: " << cpu_duration.count() << " ms" << endl;
+    cout << "Search Time: " << time_duration.count() << " ms" << endl;
 }
