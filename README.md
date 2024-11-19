@@ -36,5 +36,7 @@ Upon execution, the program will output the article most relevant to the input q
 ## Output
 
 The program will display the title and content of the Wikipedia article that best matches the query "What is learning rate in gradient descent?".
+![Screenshot 2024-11-18 201002](https://github.com/user-attachments/assets/4be1e7a9-3e6e-4e65-9e68-0c65c89a770b)
+
 
 For more details, refer to the source code and comments within each script.
