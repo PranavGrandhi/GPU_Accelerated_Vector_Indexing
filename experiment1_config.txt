@@ -1,3 +1,6 @@
---n_probe=5 --use_cuda_coarse=true --use_cuda_fine=true --print_results=false
---n_probe=20 --use_cuda_coarse=true --use_cuda_fine=true --print_results=false
---n_probe=40 --use_cuda_coarse=true --use_cuda_fine=true --print_results=false
+"--n_probe=5 --use_cuda_coarse=true --use_cuda_fine=true --print_results=false"  # GPU
+"--n_probe=20 --use_cuda_coarse=true --use_cuda_fine=true --print_results=false" # GPU
+"--n_probe=40 --use_cuda_coarse=true --use_cuda_fine=true --print_results=false" # GPU
+"--n_probe=5 --use_cuda_coarse=false --use_cuda_fine=false --print_results=false"  # CPU
+"--n_probe=20 --use_cuda_coarse=false --use_cuda_fine=false --print_results=false" # CPU
+"--n_probe=40 --use_cuda_coarse=false --use_cuda_fine=false --print_results=false" # CPU
