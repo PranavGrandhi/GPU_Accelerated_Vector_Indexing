@@ -657,10 +657,6 @@ int main(int argc, char* argv[])
     // // store the DB mapping back the string from idx
     // cout << "Loading mapBack" << endl;
     // cout << "Loaded mapBack" << endl;
-    if(print_results)
-    {
-        mapBack map_back("/scratch/pvg2018");
-    }
 
     // Search
     int k = 5;
@@ -675,15 +671,24 @@ int main(int argc, char* argv[])
     // Print Results
     if (use_cuda_coarse || use_cuda_fine) cout << "GPU Results: " << endl;
     else cout << "CPU Results: " << endl;
-    for (const auto& result : results) {
-        if(print_results)
+
+    if(print_results)
+    {
+        mapBack map_back("/scratch/pvg2018");
+        for (const auto& result : results) 
         {
             std::string text = map_back.get(result.second);
             std::string sub_text = text.substr(0, 200);
             cout << result.first << ", " << result.second << "::: Text: " << sub_text << endl;
         }
-        else
-            cout << result.first << ", " << result.second << endl;
     }
+    else
+    {
+        for (const auto& result : results) 
+        {
+            cout << result.first << ", " << result.second << endl;
+        }
+    }
+
     cout << "Search Time: " << time_duration.count() << " ms" << endl;
 }
