@@ -15,7 +15,43 @@ We utilize the Wikipedia dataset containing plain text from November 2020. You c
 1. **Embedding Generation**: Use `embedding.py` to generate vector embeddings for the Wikipedia articles.
 2. **Clustering**: Apply K-means clustering with `cluster.py` to group the embeddings into 128 clusters. Save the clustered data in a designated folder.
 3. **Data Conversion**: Convert the `.npy` files to `.bin` format using `convert_npy_bin.py` to ensure compatibility with C++.
-4. **Query Processing**: Place the embedding of the query "What is learning rate in gradient descent?" in the `queries_data` folder.
+4. **Query Processing**: 
+
+To process a query and find its nearest matching article, follow these steps:
+
+### **Using Pre-uploaded Queries**
+We have pre-generated embeddings for the following queries, saved as `.bin` files in the `queries_data` folder:
+
+1. `"What is learning rate in gradient descent?"` (`query1.bin`)
+2. `"What is Microbial biogeography?"` (`query2.bin`)
+3. `"Give me details about The Arch of Cabanes."` (`query3.bin`)
+4. `"Give me details about the history of the Taj Mahal."` (`query4.bin`)
+5. `"Tell me something about the labelling used on aid packages created and sent under the Marshall Plan."` (`query5.bin`)
+
+You can use these queries by updating the query number in the code where the query file is specified.
+
+---
+
+### **Generating a New Query**
+If you want to process a new question:
+1. Run the `test.py` script with the following command:
+   ```bash
+   python test.py --query "Your new question here"
+   ```
+2. This will generate a `.bin` file for your query and save it in the `queries_data` folder.
+3. Update the query number in the code to point to the new query file.
+
+### **Example for Query Processing in IVF.cpp**
+In your `IVF.cpp` code, make sure the path to the query file points to the desired query (e.g., `query1.bin` for the first pre-uploaded query or your new query file):
+```cpp
+std::string query_path = "queries_data/query1.bin"; // Update the file as needed
+```
+
+---
+
+### **Folder Path**
+Ensure that all `.bin` files (pre-uploaded or newly generated) are located in the `queries_data` folder.
+
 5. **Approximate Nearest Neighbor Search**: Compile and execute `IVF.cpp` to find the closest matching article to the query.
 
 ## Configurable Parameters
