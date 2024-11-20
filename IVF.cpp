@@ -529,13 +529,13 @@ class IVFIndex
 
 int main(int argc, char* argv[])
 {
-    // Check for the minimum number of command-line arguments
     int n_probe = 20;
     string mode = "NonAtomic";
     bool sequential_fine_search = true;
     bool use_cuda_coarse = false;
     bool use_cuda_fine = false;
     int threadsperBlock = 256;
+    bool print_results = false;
 
     // Parse arguments
     for (int i = 1; i < argc; ++i) {
@@ -600,7 +600,18 @@ int main(int argc, char* argv[])
                 cerr << "Error: --threadsperBlock value is out of range." << endl;
                 return 1;
             }
-        } else {
+        } else if (arg.find("--print_results=") == 0) {
+            string value = arg.substr(strlen("--print_results="));
+            if (value == "true" || value == "1") {
+                print_results = true;
+            } else if (value == "false" || value == "0") {
+                print_results = false;
+            } else {
+                cerr << "Error: --print_results must be 'true' or 'false'." << endl;
+                return 1;
+            }
+        } 
+        else {
             cerr << "Error: Unknown argument '" << arg << "'." << endl;
             return 1;
         }
@@ -613,6 +624,7 @@ int main(int argc, char* argv[])
     cout << "Use CUDA for Coarse Search: " << (use_cuda_coarse ? "True" : "False") << endl;
     cout << "Use CUDA for Fine Search: " << (use_cuda_fine ? "True" : "False") << endl;
     cout << "Threads per Block: " << threadsperBlock << endl;
+    cout << "Print Results: " << (print_results ? "True" : "False") << endl;
 
 
     // Load pretrained index
@@ -644,8 +656,11 @@ int main(int argc, char* argv[])
 
     // // store the DB mapping back the string from idx
     // cout << "Loading mapBack" << endl;
-    // mapBack map_back("/scratch/pvg2018");
     // cout << "Loaded mapBack" << endl;
+    if(print_results)
+    {
+        mapBack map_back("/scratch/pvg2018");
+    }
 
     // Search
     int k = 5;
@@ -661,10 +676,14 @@ int main(int argc, char* argv[])
     if (use_cuda_coarse || use_cuda_fine) cout << "GPU Results: " << endl;
     else cout << "CPU Results: " << endl;
     for (const auto& result : results) {
-    //     std::string text = map_back.get(result.second);
-    //     std::string sub_text = text.substr(0, 200);
-    //     cout << result.first << ", " << result.second << "::: Text: " << sub_text << endl;
-        cout << result.first << ", " << result.second << endl;
+        if(print_results)
+        {
+            std::string text = map_back.get(result.second);
+            std::string sub_text = text.substr(0, 200);
+            cout << result.first << ", " << result.second << "::: Text: " << sub_text << endl;
+        }
+        else
+            cout << result.first << ", " << result.second << endl;
     }
     cout << "Search Time: " << time_duration.count() << " ms" << endl;
 }
