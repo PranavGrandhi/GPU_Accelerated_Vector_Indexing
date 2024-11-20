@@ -13,74 +13,38 @@ DEFAULT_NUM_RUNS=5
 # Define the executable
 EXECUTABLE="./IVF"  # Replace with your actual executable name/path
 
-# Define parameter configurations
-# Each configuration is a string with parameters separated by spaces
-# Format: "<n_probe> <Atomic|NonAtomic> <SequentialFineSearch> <--use_cuda_coarse=...> <--use_cuda_fine=...>"
-
-# "--n_probe=5 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=5 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=5 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=5 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=20 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=20 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=20 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=20 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=40 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=40 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=40 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=80 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=80 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=40 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=128 --print_results=false"
-    # "--n_probe=40 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=40 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=512 --print_results=false"
-    # "--n_probe=40 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=1024 --print_results=false"
-    # "--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=128 --print_results=false"
-    # "--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    # "--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=512 --print_results=false"
-    # "--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=1024 --print_results=false"
-
-PARAMETER_CONFIGS=(
-    "--n_probe=80 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=32 --print_results=false"
-    "--n_probe=80 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=32 --print_results=false"
-    "--n_probe=80 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=1024 --print_results=false"
-    "--n_probe=80 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=1024 --print_results=false"
-    "--n_probe=80 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=32 --print_results=false"
-    "--n_probe=80 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=32 --print_results=false"
-    "--n_probe=80 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=1024 --print_results=false"
-    "--n_probe=80 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=1024 --print_results=false"
-)
-
 # ----------------------------
 # End of Configuration Section
 # ----------------------------
 
 # Function to display usage
 usage() {
-    echo "Usage: $0 [<num_runs>]"
+    echo "Usage: $0 <experiment_config_file> [<num_runs>]"
+    echo " - <experiment_config_file>: Path to the configuration file containing parameters for the experiment."
     echo " - <num_runs>: (Optional) Number of runs per configuration. Defaults to $DEFAULT_NUM_RUNS."
     echo "Example:"
-    echo "   $0 10"
-    echo "   Runs each configuration 10 times."
+    echo "   $0 experiment1_config.txt 10"
+    echo "   Runs configurations in 'experiment1_config.txt' 10 times."
 }
 
-# Parse optional argument for number of runs
-if [ $# -gt 1 ]; then
-    echo "Error: Too many arguments."
+# Parse arguments
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
     usage
     exit 1
 fi
 
-if [ $# -eq 1 ]; then
-    if [[ "$1" =~ ^[1-9][0-9]*$ ]]; then
-        NUM_RUNS=$1
-    else
-        echo "Error: <num_runs> must be a positive integer."
-        usage
-        exit 1
-    fi
-else
-    NUM_RUNS=$DEFAULT_NUM_RUNS
+CONFIG_FILE=$1
+NUM_RUNS=${2:-$DEFAULT_NUM_RUNS}
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Error: Configuration file '$CONFIG_FILE' not found."
+    exit 1
+fi
+
+if [[ ! "$NUM_RUNS" =~ ^[1-9][0-9]*$ ]]; then
+    echo "Error: <num_runs> must be a positive integer."
+    usage
+    exit 1
 fi
 
 # Check if the executable exists and is executable
@@ -92,8 +56,8 @@ fi
 # Temporary file to store the output of each run
 temp_file=$(mktemp)
 
-# Iterate over each parameter configuration
-for CONFIG in "${PARAMETER_CONFIGS[@]}"; do
+# Iterate over each parameter configuration in the configuration file
+while IFS= read -r CONFIG; do
     echo "=============================================="
     echo "Running Configuration: $CONFIG"
     echo "----------------------------------------------"
@@ -151,7 +115,7 @@ for CONFIG in "${PARAMETER_CONFIGS[@]}"; do
     echo "$static_output"
     echo "Average Search Time: $avg_time ms"
     echo ""
-done
+done < "$CONFIG_FILE"
 
 # Remove the temporary file
 rm "$temp_file"
