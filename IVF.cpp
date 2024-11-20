@@ -68,7 +68,7 @@ public:
             std::string filename = value[0];
             int num_articles = value[1];
 
-            if (file_count%100 == 0) cout << file_count << " number of file articles mapped" << endl;
+            //if (file_count%100 == 0) cout << file_count << " number of file articles mapped" << endl;
             file_count++;
 
             for (int i = 0; i < num_articles; ++i) {
