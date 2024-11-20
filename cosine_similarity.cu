@@ -185,6 +185,7 @@ void computeCosineSimilaritiesOptimized(
     float* similarityScores,
     size_t numVectors,
     size_t vectorDim
+    int threadsPer_Block = 256;
 ) {
     // Compute the norm of the query vector on the host
     float queryNorm = 0.0f;
@@ -213,7 +214,7 @@ void computeCosineSimilaritiesOptimized(
     CUDA_CHECK(cudaMemcpy(d_queryVector, queryVector, querySizeBytes, cudaMemcpyHostToDevice));
 
     // Kernel configuration
-    int threadsPerBlock = 256;
+    int threadsPerBlock = threadsPer_Block;
     int blocksPerGrid = std::min(65535, static_cast<int>((numVectors + threadsPerBlock - 1) / threadsPerBlock));
     size_t sharedMemSize = vectorDim * sizeof(float);
 
@@ -280,7 +281,8 @@ void computeCosineSimilaritiesAtomicOptimized(
     const float* queryVector,
     float* similarityScores,
     size_t numVectors,
-    size_t dim
+    size_t dim,
+    int threadsPer_Block = 256
 ) {
     // Compute the norm of the query vector on the host
     float normQuery = computeHostVectorNorm(queryVector, dim);
@@ -305,7 +307,7 @@ void computeCosineSimilaritiesAtomicOptimized(
     CUDA_CHECK(cudaMemset(devicePartialNorms, 0, sizeResults));
 
     // Execute kernels
-    int threadsPerBlock = 256;
+    int threadsPerBlock = threadsPer_Block;
     int numBlocks = std::min(65535, static_cast<int>((numVectors * dim + threadsPerBlock - 1) / threadsPerBlock));
     computeDotAndNorm<<<numBlocks, threadsPerBlock>>>(
         deviceBatch,

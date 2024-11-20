@@ -27,7 +27,8 @@ void computeCosineSimilaritiesOptimized(
     const float* hostQueryVector,
     float* hostSimilarityScores,
     size_t numVectors,
-    size_t vectorDim
+    size_t vectorDim,
+    int threadsPerBlock = 256
 );
 
 void computeCosineSimilaritiesAtomicOptimized(
@@ -35,7 +36,8 @@ void computeCosineSimilaritiesAtomicOptimized(
     const float* queryVector,
     float* similarityScores,
     size_t numVectors,
-    size_t dim
+    size_t dim,
+    int threadsPerBlock = 256
 );
 
 // mapBack
@@ -171,7 +173,8 @@ class IVFIndex
     int topK,
     int batchSize,
     bool useCuda,
-    string mode) 
+    string mode,
+    int threadsPerBlock = 256) 
     {
         if (batchSize == 0) 
         {
@@ -202,7 +205,8 @@ class IVFIndex
                         query,
                         scores.data(),
                         currentBatchSize,
-                        vectorSize
+                        vectorSize,
+                        threadsPerBlock
                     );
                 }
                 else if(mode == "NonAtomic")
@@ -212,7 +216,8 @@ class IVFIndex
                     query,
                     scores.data(),
                     currentBatchSize,
-                    vectorSize
+                    vectorSize,
+                    threadsPerBlock
                     );
                 }
             }
@@ -254,7 +259,7 @@ class IVFIndex
     }
 
     //Returns top k results from searching top n_probe centroids
-    vector<pair<float, int>> search(vector<float>& query, int k, bool use_cuda_coarse, bool use_cuda_fine, string mode = "Atomic", bool sequential_fine_search = true) 
+    vector<pair<float, int>> search(vector<float>& query, int k, bool use_cuda_coarse, bool use_cuda_fine, string mode = "Atomic", bool sequential_fine_search = true, int threadsPerBlock = 256) 
     {
         // Find top centroids
     auto top_centroids = findSimilar(
@@ -265,7 +270,8 @@ class IVFIndex
         n_probe, 
         batch_size, 
         use_cuda_coarse,
-        mode
+        mode,
+        threadsPerBlock
     );
 
     if (sequential_fine_search)
@@ -293,7 +299,8 @@ class IVFIndex
                 k, 
                 batch_size, 
                 use_cuda_fine,
-                mode
+                mode,
+                threadsPerBlock
             );
 
             for (const auto& sim : similarities) 
@@ -370,7 +377,8 @@ class IVFIndex
             k, 
             batch_size, 
             use_cuda_fine,
-            mode
+            mode,
+            threadsPerBlock
         );
 
         // Min-heap to store top k results
@@ -522,81 +530,77 @@ class IVFIndex
 int main(int argc, char* argv[])
 {
     // Check for the minimum number of command-line arguments
-    if (argc < 4) {
-        cerr << "Usage: " << argv[0] << " <n_probe> <Atomic|NonAtomic> <SequentialFineSearch> [--use_cuda_coarse=<true|false>] [--use_cuda_fine=<true|false>]" << endl;
-        cerr << " - <n_probe>: Number of centroids to probe (integer)" << endl;
-        cerr << " - <Atomic|NonAtomic>: Mode of operation" << endl;
-        cerr << " - <SequentialFineSearch>: true or false" << endl;
-        cerr << " - [--use_cuda_coarse=<true|false>]: (Optional) Use CUDA for coarse search" << endl;
-        cerr << " - [--use_cuda_fine=<true|false>]: (Optional) Use CUDA for fine search" << endl;
-        return 1;
-    }
-
-    // Parse the first argument: n_probe
-    int n_probe;
-    try {
-        n_probe = stoi(argv[1]);
-    } catch (const invalid_argument& e) {
-        cerr << "Error: <n_probe> must be an integer." << endl;
-        return 1;
-    }
-
-    // Parse the second argument: mode
-    string mode = argv[2];
-    if (mode != "Atomic" && mode != "NonAtomic") {
-        cerr << "Error: Mode must be either 'Atomic' or 'NonAtomic'." << endl;
-        return 1;
-    }
-
-    // Parse the third argument: sequential_fine_search
-    string seq_fine_search_str = argv[3];
-    bool sequential_fine_search;
-
-    if (seq_fine_search_str == "true" || seq_fine_search_str == "1") {
-        sequential_fine_search = true;
-    }
-    else if (seq_fine_search_str == "false" || seq_fine_search_str == "0") {
-        sequential_fine_search = false;
-    }
-    else {
-        cerr << "Error: <SequentialFineSearch> must be 'true' or 'false'." << endl;
-        return 1;
-    }
-
-    // Initialize default values for the new flags
+    int n_probe = 20;
+    string mode = "NonAtomic";
+    bool sequential_fine_search = true;
     bool use_cuda_coarse = false;
     bool use_cuda_fine = false;
+    int threadsperBlock = 256;
 
-    // Parse additional flags
-    for (int i = 4; i < argc; ++i) {
+    // Parse arguments
+    for (int i = 1; i < argc; ++i) {
         string arg = argv[i];
-        if (arg.find("--use_cuda_coarse=") == 0) {
+        if (arg.find("--n_probe=") == 0) {
+            string value = arg.substr(strlen("--n_probe="));
+            try {
+                n_probe = stoi(value);
+            } catch (const invalid_argument&) {
+                cerr << "Error: --n_probe must be an integer." << endl;
+                return 1;
+            }
+        } else if (arg.find("--mode=") == 0) {
+            mode = arg.substr(strlen("--mode="));
+            if (mode != "Atomic" && mode != "NonAtomic") {
+                cerr << "Error: --mode must be either 'Atomic' or 'NonAtomic'." << endl;
+                return 1;
+            }
+        } else if (arg.find("--sequential_fine_search=") == 0) {
+            string value = arg.substr(strlen("--sequential_fine_search="));
+            if (value == "true" || value == "1") {
+                sequential_fine_search = true;
+            } else if (value == "false" || value == "0") {
+                sequential_fine_search = false;
+            } else {
+                cerr << "Error: --sequential_fine_search must be 'true' or 'false'." << endl;
+                return 1;
+            }
+        } else if (arg.find("--use_cuda_coarse=") == 0) {
             string value = arg.substr(strlen("--use_cuda_coarse="));
             if (value == "true" || value == "1") {
                 use_cuda_coarse = true;
-            }
-            else if (value == "false" || value == "0") {
+            } else if (value == "false" || value == "0") {
                 use_cuda_coarse = false;
-            }
-            else {
+            } else {
                 cerr << "Error: --use_cuda_coarse must be 'true' or 'false'." << endl;
                 return 1;
             }
-        }
-        else if (arg.find("--use_cuda_fine=") == 0) {
+        } else if (arg.find("--use_cuda_fine=") == 0) {
             string value = arg.substr(strlen("--use_cuda_fine="));
             if (value == "true" || value == "1") {
                 use_cuda_fine = true;
-            }
-            else if (value == "false" || value == "0") {
+            } else if (value == "false" || value == "0") {
                 use_cuda_fine = false;
-            }
-            else {
+            } else {
                 cerr << "Error: --use_cuda_fine must be 'true' or 'false'." << endl;
                 return 1;
             }
-        }
-        else {
+        } else if (arg.find("--threadsperBlock=") == 0) {
+            string value = arg.substr(strlen("--threadsperBlock="));
+            try {
+                int threads = stoi(value);
+                if (threads % 32 != 0) {
+                    cerr << "Error: --threadsperBlock must be a multiple of 32." << endl;
+                    return 1;
+                }
+                threadsperBlock = threads;
+            } catch (const invalid_argument&) {
+                cerr << "Error: --threadsperBlock must be a valid integer." << endl;
+                return 1;
+            } catch (const out_of_range&) {
+                cerr << "Error: --threadsperBlock value is out of range." << endl;
+                return 1;
+            }
+        } else {
             cerr << "Error: Unknown argument '" << arg << "'." << endl;
             return 1;
         }
@@ -608,6 +612,7 @@ int main(int argc, char* argv[])
     cout << "Sequential Fine Search: " << (sequential_fine_search ? "True" : "False") << endl;
     cout << "Use CUDA for Coarse Search: " << (use_cuda_coarse ? "True" : "False") << endl;
     cout << "Use CUDA for Fine Search: " << (use_cuda_fine ? "True" : "False") << endl;
+    cout << "Threads per Block: " << threadsperBlock << endl;
 
 
     // Load pretrained index
@@ -648,7 +653,7 @@ int main(int argc, char* argv[])
 
     // Measure time for GPU search
     auto start_time = chrono::high_resolution_clock::now();
-    results = index.search(query, k, use_cuda_coarse, use_cuda_fine, mode);
+    results = index.search(query, k, use_cuda_coarse, use_cuda_fine, mode, sequential_fine_search, threadsperBlock);
     auto end_time = chrono::high_resolution_clock::now();
     auto time_duration = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
 
