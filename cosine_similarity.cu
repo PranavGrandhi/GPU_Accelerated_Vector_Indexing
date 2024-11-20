@@ -184,9 +184,9 @@ void computeCosineSimilaritiesOptimized(
     const float* queryVector,
     float* similarityScores,
     size_t numVectors,
-    size_t vectorDim
-    int threadsPer_Block = 256
-) {
+    size_t vectorDim,
+    int threadsPer_Block = 256) 
+{
     // Compute the norm of the query vector on the host
     float queryNorm = 0.0f;
     for (size_t i = 0; i < vectorDim; ++i) {
