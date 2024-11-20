@@ -16,19 +16,32 @@ EXECUTABLE="./IVF"  # Replace with your actual executable name/path
 # Define parameter configurations
 # Each configuration is a string with parameters separated by spaces
 # Format: "<n_probe> <Atomic|NonAtomic> <SequentialFineSearch> <--use_cuda_coarse=...> <--use_cuda_fine=...>"
+# PARAMETER_CONFIGS=(
+#     "--n_probe=5 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+#     "--n_probe=5 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+#     "--n_probe=5 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+#     "--n_probe=5 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+#     "--n_probe=20 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+#     "--n_probe=20 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+#     "--n_probe=20 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+#     "--n_probe=20 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+#     "--n_probe=40 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+#     "--n_probe=40 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+#     "--n_probe=40 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+#     "--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+# )
+
 PARAMETER_CONFIGS=(
-    "--n_probe=5 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    "--n_probe=5 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    "--n_probe=5 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    "--n_probe=5 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    "--n_probe=20 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    "--n_probe=20 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    "--n_probe=20 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    "--n_probe=20 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    "--n_probe=40 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
-    "--n_probe=40 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+    "--n_probe=80 --mode=Atomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+    "--n_probe=80 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+    "--n_probe=40 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=128 --print_results=false"
     "--n_probe=40 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+    "--n_probe=40 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=512 --print_results=false"
+    "--n_probe=40 --mode=NonAtomic --sequential_fine_search=true --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=1024 --print_results=false"
+    "--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=128 --print_results=false"
     "--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=256 --print_results=false"
+    "--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=512 --print_results=false"
+    "--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=false --use_cuda_fine=true --threadsperBlock=1024 --print_results=false"
 )
 
 # ----------------------------
