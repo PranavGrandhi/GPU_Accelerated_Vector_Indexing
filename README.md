@@ -15,8 +15,19 @@ We utilize the Wikipedia dataset containing plain text from November 2020. You c
 1. **Embedding Generation**: Use `embedding.py` to generate vector embeddings for the Wikipedia articles.
 2. **Clustering**: Apply K-means clustering with `cluster.py` to group the embeddings into 128 clusters. Save the clustered data in a designated folder.
 3. **Data Conversion**: Convert the `.npy` files to `.bin` format using `convert_npy_bin.py` to ensure compatibility with C++.
-4. **Query Processing**: 
+4. **Query Processing**: Use pregenerated embeddings in the queries_data folder or create custom ones (See the Queries subsection for more info)
+5. **Approximate Nearest Neighbor Search**: Compile and execute `IVF.cpp` to find the closest matching article to the query.
 
+## Configurable Parameters
+
+The following arguments need to be passed to the executable:
+1. n_probe: Value from 1 to 128 which denotes how many top clusters can be chosen in the coarse search to do the fine search in
+2. Which kernel mode: This defines which cuda kernel will run. It can either be "Atomic", or "NonAtomic". These are the 2 different types of kernels we use to compute the coarse and fine search
+3. Sequential Search: This can be true or false. "true" stands for sequential search and "false" for non sequential search. This defines if each cluster is handled by a separate kernel or all the clusters are combined into one and a single kernel handles them all.
+4. Use CUDA coarse: This can be true or false. This stands for using the CPU or GPU for the coarse search part (find the top n_probe cluster centroids).
+5. Use CUDA fine: This can be true or false. This stands for using the CPU or GPU for the fine search part (find the top k closest elements in the top n_probe clusters).
+
+## Input Queries
 #### **Using Pre-uploaded Queries**
 We have pre-generated embeddings for the following queries, saved as `.bin` files in the `queries_data` folder:
 
@@ -46,17 +57,6 @@ std::string query_path = "queries_data/query1.bin"; // Update the file as needed
 #### **Folder Path**
 Ensure that all `.bin` files (pre-uploaded or newly generated) are located in the `queries_data` folder.
 
-5. **Approximate Nearest Neighbor Search**: Compile and execute `IVF.cpp` to find the closest matching article to the query.
-
-## Configurable Parameters
-
-The following arguments need to be passed to the executable:
-1. n_probe: Value from 1 to 128 which denotes how many top clusters can be chosen in the coarse search to do the fine search in
-2. Which kernel mode: This defines which cuda kernel will run. It can either be "Atomic", or "NonAtomic". These are the 2 different types of kernels we use to compute the coarse and fine search
-3. Sequential Search: This can be true or false. "true" stands for sequential search and "false" for non sequential search. This defines if each cluster is handled by a separate kernel or all the clusters are combined into one and a single kernel handles them all.
-4. Use CUDA coarse: This can be true or false. This stands for using the CPU or GPU for the coarse search part (find the top n_probe cluster centroids).
-5. Use CUDA fine: This can be true or false. This stands for using the CPU or GPU for the fine search part (find the top k closest elements in the top n_probe clusters).
-
 ## Compilation and Execution
 
 To compile and run the program on a CUDA-enabled machine:
@@ -79,6 +79,9 @@ Upon execution, the program will output the article most relevant to the input q
 
 The program will display the title and content of the Wikipedia article that best matches the query "What is learning rate in gradient descent?".
 ![Screenshot 2024-11-18 201002](https://github.com/user-attachments/assets/4be1e7a9-3e6e-4e65-9e68-0c65c89a770b)
+
+## Analysis
+We can use the run_multiple_configs.sh file to run certain configurations multiple times and output the average running CPU/GPU time. Read the .sh file for more details
 
 
 For more details, refer to the source code and comments within each script.
