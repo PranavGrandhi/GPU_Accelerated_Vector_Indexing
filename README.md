@@ -68,9 +68,9 @@ cd GPU_Accelerated_Vector_Indexing
 
 module load cuda-12.4
 nvcc IVF.cpp cosine_similarity.cu -o IVF
-./IVF $n_probe $kernel_mode $Sequential_search $cuda_coarse $cuda_fine
+./IVF --n_probe=30 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=true --use_cuda_fine=true --threadsperBlock=128
 
-Example: ./IVF 40 Atomic true false true
+Update flag values as needed
 ```
 
 Upon execution, the program will output the article most relevant to the input query.
