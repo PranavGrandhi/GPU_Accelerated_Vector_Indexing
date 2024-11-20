@@ -26,6 +26,7 @@ The following arguments need to be passed to the executable:
 3. Sequential Search: This can be true or false. "true" stands for sequential search and "false" for non sequential search. This defines if each cluster is handled by a separate kernel or all the clusters are combined into one and a single kernel handles them all.
 4. Use CUDA coarse: This can be true or false. This stands for using the CPU or GPU for the coarse search part (find the top n_probe cluster centroids).
 5. Use CUDA fine: This can be true or false. This stands for using the CPU or GPU for the fine search part (find the top k closest elements in the top n_probe clusters).
+6. ThreadsPerBlock: Can be any multiple of 32. Denotes the threads per block
 
 ## Input Queries
 #### **Using Pre-uploaded Queries**
@@ -54,9 +55,6 @@ In your `IVF.cpp` code, make sure the path to the query file points to the desir
 std::string query_path = "queries_data/query1.bin"; // Update the file as needed
 ```
 
-#### **Folder Path**
-Ensure that all `.bin` files (pre-uploaded or newly generated) are located in the `queries_data` folder.
-
 ## Compilation and Execution
 
 To compile and run the program on a CUDA-enabled machine:
@@ -68,7 +66,7 @@ cd GPU_Accelerated_Vector_Indexing
 
 module load cuda-12.4
 nvcc IVF.cpp cosine_similarity.cu -o IVF
-./IVF --n_probe=30 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=true --use_cuda_fine=true --threadsperBlock=128
+./IVF --n_probe=30 --mode=Atomic --sequential_fine_search=false --use_cuda_coarse=true --use_cuda_fine=true --threadsperBlock=128 --print_results=true
 
 Update flag values as needed
 ```
