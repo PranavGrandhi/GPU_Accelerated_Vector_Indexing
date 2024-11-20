@@ -1,0 +1,4 @@
+--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=true --use_cuda_fine=true --threadsperBlock=128 --print_results=false
+--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=true --use_cuda_fine=true --threadsperBlock=256 --print_results=false
+--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=true --use_cuda_fine=true --threadsperBlock=512 --print_results=false
+--n_probe=40 --mode=NonAtomic --sequential_fine_search=false --use_cuda_coarse=true --use_cuda_fine=true --threadsperBlock=1024 --print_results=false
