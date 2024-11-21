@@ -68,7 +68,7 @@ public:
             std::string filename = value[0];
             int num_articles = value[1];
 
-            //if (file_count%100 == 0) cout << file_count << " number of file articles mapped" << endl;
+            if (file_count%100 == 0) cout << file_count << " number of file articles mapped" << endl;
             file_count++;
 
             for (int i = 0; i < num_articles; ++i) {
@@ -174,6 +174,7 @@ class IVFIndex
     int batchSize,
     bool useCuda,
     string mode,
+    double& cosine_sim_time,
     int threadsPerBlock = 256) 
     {
         if (batchSize == 0) 
@@ -196,8 +197,9 @@ class IVFIndex
 
             // get cosine similarity on this batch
             vector<float> scores(currentBatchSize);
+            auto start_time = chrono::high_resolution_clock::now();
             if(useCuda)
-            {
+            {   
                 if(mode == "Atomic")
                 {
                     computeCosineSimilaritiesAtomicOptimized(
@@ -231,6 +233,9 @@ class IVFIndex
                     vectorSize
                 );
             }
+            auto end_time = chrono::high_resolution_clock::now();
+            auto time_duration = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
+            cosine_sim_time += time_duration.count();
 
             // update heap to keep track of top k
             for (int j = 0; j < currentBatchSize; j++) 
@@ -261,53 +266,150 @@ class IVFIndex
     //Returns top k results from searching top n_probe centroids
     vector<pair<float, int>> search(vector<float>& query, int k, bool use_cuda_coarse, bool use_cuda_fine, string mode = "Atomic", bool sequential_fine_search = true, int threadsPerBlock = 256) 
     {
+        double cosine_sim_time = 0.0;
         // Find top centroids
-    auto top_centroids = findSimilar(
-        cluster_centroids.data(), 
-        query.data(), 
-        num_clusters, 
-        embedding_dim, 
-        n_probe, 
-        batch_size, 
-        use_cuda_coarse,
-        mode,
-        threadsPerBlock
-    );
+        auto top_centroids = findSimilar(
+            cluster_centroids.data(), 
+            query.data(), 
+            num_clusters, 
+            embedding_dim, 
+            n_probe, 
+            batch_size, 
+            use_cuda_coarse,
+            mode,
+            cosine_sim_time,
+            threadsPerBlock
+        );
 
-    if (sequential_fine_search)
-    {
-        // Original behavior: Process each cluster sequentially
-        // Min-heap to store top k results
-        auto cmp = [](const pair<float, int>& left, const pair<float, int>& right) 
+        cosine_sim_time = 0.0;
+
+        if (sequential_fine_search)
         {
-            return left.first > right.first; 
-        };
-        priority_queue<pair<float, int>, vector<pair<float, int>>, decltype(cmp)> min_heap(cmp);
+            // Original behavior: Process each cluster sequentially
+            // Min-heap to store top k results
+            auto cmp = [](const pair<float, int>& left, const pair<float, int>& right) 
+            {
+                return left.first > right.first; 
+            };
+            priority_queue<pair<float, int>, vector<pair<float, int>>, decltype(cmp)> min_heap(cmp);
 
-        // Iterate over top centroids
-        for (const auto& centroid : top_centroids) 
+            // Iterate over top centroids
+            for (const auto& centroid : top_centroids) 
+            {
+                int cluster = centroid.second;
+
+                // Find similar embeddings in the cluster
+                int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
+                auto similarities = findSimilar(
+                    cluster_embeddings[cluster].data(), 
+                    query.data(), 
+                    elements_in_cluster, 
+                    embedding_dim, 
+                    k, 
+                    batch_size, 
+                    use_cuda_fine,
+                    mode,
+                    cosine_sim_time,
+                    threadsPerBlock
+                );
+
+                for (const auto& sim : similarities) 
+                {
+                    float score = sim.first;
+                    int idx = sim.second;
+                    int mapping_value = cluster_mappings[cluster][idx];
+
+                    if (min_heap.size() < k) 
+                    {
+                        min_heap.emplace(score, mapping_value);
+                    } 
+                    else if (score > min_heap.top().first) 
+                    {
+                        min_heap.pop();
+                        min_heap.emplace(score, mapping_value);
+                    }
+                }
+            }
+
+            // Extract results from the heap
+            vector<pair<float, int>> results;
+            while (!min_heap.empty()) 
+            {
+                results.push_back(min_heap.top());
+                min_heap.pop();
+            }
+            reverse(results.begin(), results.end()); 
+            return results;
+        }
+        else
         {
-            int cluster = centroid.second;
+            auto start_time = chrono::high_resolution_clock::now();
+            // New behavior: Combine embeddings from top centroids and process once
+            vector<float> combined_embeddings;
+            vector<int> combined_mappings;
+            int total_elements = 0;
 
-            // Find similar embeddings in the cluster
-            int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
+            // First, calculate total number of embeddings to reserve space
+            for (const auto& centroid : top_centroids)
+            {
+                int cluster = centroid.second;
+                int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
+                total_elements += elements_in_cluster;
+            }
+
+            combined_embeddings.reserve(total_elements * embedding_dim);
+            combined_mappings.reserve(total_elements);
+
+            // Combine embeddings and mappings from top centroids
+            for (const auto& centroid : top_centroids)
+            {
+                int cluster = centroid.second;
+                const vector<float>& cluster_emb = cluster_embeddings[cluster];
+                const vector<int>& cluster_map = cluster_mappings[cluster];
+
+                combined_embeddings.insert(
+                    combined_embeddings.end(), 
+                    cluster_emb.begin(), 
+                    cluster_emb.end()
+                );
+                combined_mappings.insert(
+                    combined_mappings.end(), 
+                    cluster_map.begin(), 
+                    cluster_map.end()
+                );
+            }
+
+            auto end_time = chrono::high_resolution_clock::now();
+            auto time_duration = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
+            // cout << "Combination time taken: " << time_duration.count() << " ms" << endl;
+
+            // Find similarities using the combined embeddings
             auto similarities = findSimilar(
-                cluster_embeddings[cluster].data(), 
+                combined_embeddings.data(), 
                 query.data(), 
-                elements_in_cluster, 
+                total_elements, 
                 embedding_dim, 
                 k, 
                 batch_size, 
                 use_cuda_fine,
                 mode,
+                cosine_sim_time,
                 threadsPerBlock
             );
 
+            // Min-heap to store top k results
+            auto cmp = [](const pair<float, int>& left, const pair<float, int>& right) 
+            {
+                return left.first > right.first; 
+            };
+            priority_queue<pair<float, int>, vector<pair<float, int>>, decltype(cmp)> min_heap(cmp);
+
+            // Map similarities back to original indices
             for (const auto& sim : similarities) 
             {
                 float score = sim.first;
                 int idx = sim.second;
-                int mapping_value = cluster_mappings[cluster][idx];
+                int mapping_value = combined_mappings[idx];
 
                 if (min_heap.size() < k) 
                 {
@@ -319,104 +421,19 @@ class IVFIndex
                     min_heap.emplace(score, mapping_value);
                 }
             }
-        }
 
-        // Extract results from the heap
-        vector<pair<float, int>> results;
-        while (!min_heap.empty()) 
-        {
-            results.push_back(min_heap.top());
-            min_heap.pop();
-        }
-        reverse(results.begin(), results.end()); 
-        return results;
-    }
-    else
-    {
-        // New behavior: Combine embeddings from top centroids and process once
-        vector<float> combined_embeddings;
-        vector<int> combined_mappings;
-        int total_elements = 0;
-
-        // First, calculate total number of embeddings to reserve space
-        for (const auto& centroid : top_centroids)
-        {
-            int cluster = centroid.second;
-            int elements_in_cluster = cluster_embeddings[cluster].size() / embedding_dim;
-            total_elements += elements_in_cluster;
-        }
-
-        combined_embeddings.reserve(total_elements * embedding_dim);
-        combined_mappings.reserve(total_elements);
-
-        // Combine embeddings and mappings from top centroids
-        for (const auto& centroid : top_centroids)
-        {
-            int cluster = centroid.second;
-            const vector<float>& cluster_emb = cluster_embeddings[cluster];
-            const vector<int>& cluster_map = cluster_mappings[cluster];
-
-            combined_embeddings.insert(
-                combined_embeddings.end(), 
-                cluster_emb.begin(), 
-                cluster_emb.end()
-            );
-            combined_mappings.insert(
-                combined_mappings.end(), 
-                cluster_map.begin(), 
-                cluster_map.end()
-            );
-        }
-
-        // Find similarities using the combined embeddings
-        auto similarities = findSimilar(
-            combined_embeddings.data(), 
-            query.data(), 
-            total_elements, 
-            embedding_dim, 
-            k, 
-            batch_size, 
-            use_cuda_fine,
-            mode,
-            threadsPerBlock
-        );
-
-        // Min-heap to store top k results
-        auto cmp = [](const pair<float, int>& left, const pair<float, int>& right) 
-        {
-            return left.first > right.first; 
-        };
-        priority_queue<pair<float, int>, vector<pair<float, int>>, decltype(cmp)> min_heap(cmp);
-
-        // Map similarities back to original indices
-        for (const auto& sim : similarities) 
-        {
-            float score = sim.first;
-            int idx = sim.second;
-            int mapping_value = combined_mappings[idx];
-
-            if (min_heap.size() < k) 
+            // Extract results from the heap
+            vector<pair<float, int>> results;
+            while (!min_heap.empty()) 
             {
-                min_heap.emplace(score, mapping_value);
-            } 
-            else if (score > min_heap.top().first) 
-            {
+                results.push_back(min_heap.top());
                 min_heap.pop();
-                min_heap.emplace(score, mapping_value);
             }
+            reverse(results.begin(), results.end()); 
+            // cout << "Cosine Similarity Time: " << cosine_sim_time << " ms" << endl;
+            return results;
         }
-
-        // Extract results from the heap
-        vector<pair<float, int>> results;
-        while (!min_heap.empty()) 
-        {
-            results.push_back(min_heap.top());
-            min_heap.pop();
-        }
-        reverse(results.begin(), results.end()); 
-        return results;
     }
-}
 
     // Static method to load pretrained index
     static IVFIndex from_pretrained(const string& data_dir, int n_probe) 
