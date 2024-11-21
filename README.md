@@ -78,8 +78,33 @@ Upon execution, the program will output the article most relevant to the input q
 The program will display the title and content of the Wikipedia article that best matches the query "What is learning rate in gradient descent?", or any custom query
 
 
+
+# Experiment Analysis
+
 ## Analysis
-We can use the run_multiple_configs.sh file to run certain configurations multiple times and output the average running CPU/GPU time. Read the .sh file for more details
-![ss](https://github.com/user-attachments/assets/2bfc5aef-edba-42e8-961f-c02ac976cb55)
+
+We can use the `run_multiple_configs.sh` file to run specific configurations multiple times and calculate the average running CPU/GPU time for each configuration. 
+
+To execute an experiment:
+
+1. **Prepare the Configuration File**: Each experiment has a corresponding `.txt` file listing all parameter configurations (e.g., `experiment1_config.txt`).
+
+2. **Run the Script**: Use the following command:
+   ```bash
+   ./run_multiple_configs.sh <configuration_file> [<num_runs>]
+   ```
+   - Replace `<configuration_file>` with the name of the experiment configuration file (e.g., `experiment1_config.txt`).
+   - Replace `<num_runs>` with the number of runs for averaging (default is 5).
+
+3. **Output**: The script will display the configuration details, individual run times, and the average time for each configuration.
+
+### Example Command
+```bash
+./run_multiple_configs.sh experiment1_config.txt 10
+```
 
 For more details, refer to the source code and comments within each script.
+
+![ss](https://github.com/user-attachments/assets/2bfc5aef-edba-42e8-961f-c02ac976cb55)
+
+
